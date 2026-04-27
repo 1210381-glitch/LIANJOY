@@ -11,11 +11,12 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(csrf -> csrf.disable()) // Deshabilitamos esto para pruebas iniciales
+            .csrf(csrf -> csrf.disable()) // Desactiva CSRF para poder usar Postman/Login
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/api/auth/**").permitAll() // Permite entrar al login sin estar autenticado
-                .anyRequest().authenticated() // Todo lo demás requiere estar logueado
-            );
+                .requestMatchers("/", "/api/auth/**", "/css/**", "/js/**", "/images/**").permitAll() // Rutas libres
+                .anyRequest().authenticated() // Lo demás pide login
+            )
+            .formLogin(login -> login.permitAll()); // Permite el formulario por defecto
         
         return http.build();
     }

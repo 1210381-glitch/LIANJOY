@@ -1,28 +1,36 @@
 package com.example.LIANJOY.model;
 
 import jakarta.persistence.*;
-import java.math.BigDecimal;
-import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
 
 @Entity
-@Table(name = "productos")
-@Data
+@Table(name = "productos", schema = "dbo")
+@NoArgsConstructor
+@AllArgsConstructor
 public class Producto {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
     private String nombre;
-    private String descripcion;
-    private BigDecimal precio;
+    private Double precio; // Asegúrate de que se llame precio y sea Double
     private Integer stock;
+    private String imagenUrl;
 
-    @Column(name = "imagen_principal")
-    private String imagenPrincipal;
+    // --- MÉTODOS MANUALES ---
+    public Integer getId() { return id; }
+    public void setId(Integer id) { this.id = id; }
 
-    @ManyToOne
-    @JoinColumn(name = "categorias_id")
-    private Categoria categoria;
+    public String getNombre() { return nombre; }
+    public void setNombre(String nombre) { this.nombre = nombre; }
 
-    // Getters y Setters
+    public Double getPrecio() { return precio; }
+    public void setPrecio(Double precio) { this.precio = precio; }
+
+    public Integer getStock() { return stock; }
+    public void setStock(Integer stock) { this.stock = stock; }
+
+    public String getImagenUrl() { return imagenUrl; }
+    public void setImagenUrl(String imagenUrl) { this.imagenUrl = imagenUrl; }
 }
