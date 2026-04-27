@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Checkout - LIANJOY</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .bg-terra-green { background-color: #1B4332; }
+        .bg-image-container {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -1; background-color: #000;
+        }
+        .bg-image-container img {
+            width: 100%; height: 100%; object-fit: cover; filter: blur(15px); opacity: 0.5;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="bg-image-container"><img src="/imagenes/fondo.png"></div>
+    <div class="max-w-xl mx-auto p-6 mt-10">
+        <div class="bg-white/90 backdrop-blur-md rounded-3xl p-8 shadow-2xl border border-white/50">
+            <h2 class="text-3xl font-black text-gray-800 mb-6 text-center italic">DATOS DE ENVÍO</h2>
+            <form th:action="@{/pedido/confirmar}" method="post" class="space-y-4">
+                <div>
+                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">País</label>
+                    <input type="text" name="pais" required class="w-full p-4 rounded-2xl border border-gray-100 focus:ring-2 focus:ring-green-800 outline-none" placeholder="México">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Ciudad</label>
+                        <input type="text" name="ciudad" required class="w-full p-4 rounded-2xl border border-gray-100 focus:ring-2 focus:ring-green-800 outline-none" placeholder="Monterrey">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Cód. Postal</label>
+                        <input type="text" name="codigoPostal" required class="w-full p-4 rounded-2xl border border-gray-100 focus:ring-2 focus:ring-green-800 outline-none" placeholder="64000">
+                    </div>
+                </div>
+                <div>
+                    <label class="text-[10px] font-black text-gray-400 uppercase tracking-widest">Dirección Completa</label>
+                    <textarea name="direccion" required class="w-full p-4 rounded-2xl border border-gray-100 focus:ring-2 focus:ring-green-800 outline-none" placeholder="Calle, número y colonia" rows="3"></textarea>
+                </div>
+                <div class="bg-gray-50 p-4 rounded-2xl border border-dashed border-gray-300 text-center">
+                    <p class="font-bold text-gray-700">Total a pagar: <span class="text-terra-green text-xl" th:text="'$' + ${total}">$0.00</span></p>
+                </div>
+                <button type="submit" class="w-full bg-[#1B4332] text-white py-5 rounded-2xl font-black text-lg shadow-xl hover:bg-green-900 transition-all uppercase tracking-widest">
+                    Continuar al Pago
+                </button>
+            </form>
+            <a href="/carrito" class="block text-center mt-4 text-xs font-bold text-gray-400 uppercase">← Volver al carrito</a>
+        </div>
+    </div>
+</body>
+</html>

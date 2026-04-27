@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acceso - LIANJOY</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .bg-terra-green { background-color: #1B4332; }
+        .border-terra-green { border-color: #1B4332; }
+        .text-terra-green { color: #1B4332; }
+        
+        .bg-image-container {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: -1;
+            overflow: hidden;
+            background-color: #000;
+        }
+        .bg-image-container img {
+            width: 100%; height: 100%;
+            object-fit: cover;
+            filter: blur(10px);
+            opacity: 0.65;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 flex flex-col min-h-screen items-center p-4">
+
+    
+    <div class="bg-image-container">
+        <img src="/imagenes/fondo.png" alt="fondo">
+    </div>
+    
+
+    <div class="mt-8 mb-8">
+        <a href="/" class="text-3xl font-black text-terra-green italic tracking-tighter">LIANJOY</a>
+    </div>
+
+    <div class="bg-white p-8 rounded-xl shadow-2xl border border-gray-100 w-full max-w-md">
+        <h1 class="text-2xl font-semibold mb-6 text-gray-800">Iniciar sesión o crear cuenta</h1>
+
+        <form th:action="@{/api/auth/procesar-acceso}" th:object="${usuario}" method="post" class="space-y-4">
+            
+            <div class="flex gap-4 mb-6 border-b border-gray-100 pb-2 text-sm">
+                <label class="cursor-pointer font-bold border-b-2 border-terra-green pb-2 transition-all" id="tab-login">
+                    <input type="radio" name="modo" value="login" class="hidden" checked onchange="toggleModo('login')">
+                    Iniciar Sesión
+                </label>
+                <label class="cursor-pointer font-medium text-gray-400 pb-2 transition-all" id="tab-registro">
+                    <input type="radio" name="modo" value="registro" class="hidden" onchange="toggleModo('registro')">
+                    Soy nuevo cliente
+                </label>
+            </div>
+
+            <div id="campo-nombre" class="hidden transition-all">
+                <label for="nombre" class="block text-sm font-bold text-gray-700 mb-1">Nombre completo</label>
+                <input type="text" th:field="*{nombre}" 
+                       class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-200 focus:border-terra-green transition"
+                       placeholder="Tu nombre">
+            </div>
+
+            <div>
+                <label for="email" class="block text-sm font-bold text-gray-700 mb-1">Correo electrónico</label>
+                <input type="email" th:field="*{email}" required
+                       class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-200 focus:border-terra-green transition"
+                       placeholder="ejemplo@correo.com">
+            </div>
+
+            <div id="campo-telefono" class="hidden transition-all">
+                <label for="telefono" class="block text-sm font-bold text-gray-700 mb-1">Teléfono</label>
+                <input type="text" th:field="*{telefono}" 
+                       class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-200 focus:border-terra-green transition"
+                       placeholder="123 456 7890">
+            </div>
+
+            <div>
+                <label for="password" class="block text-sm font-bold text-gray-700 mb-1">Contraseña</label>
+                <input type="password" th:field="*{password}" required
+                       class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-200 focus:border-terra-green transition">
+            </div>
+
+            <div class="pt-2">
+                <button type="submit" class="w-full bg-[#1B4332] text-white py-3 rounded-lg flex justify-center items-center hover:bg-green-900 transition-all shadow-lg">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                </button>
+            </div>
+        </form>
+
+        <div class="relative my-8">
+            <div class="absolute inset-0 flex items-center" aria-hidden="true">
+                <div class="w-full border-t border-gray-200"></div>
+            </div>
+            <div class="relative flex justify-center">
+                <span class="bg-white px-2 text-xs text-gray-400 uppercase tracking-wider">Aviso</span>
+            </div>
+        </div>
+
+        <p class="text-xs text-gray-500 text-center leading-relaxed">
+            Al continuar, aceptas las <a href="#" class="text-blue-700 hover:underline">Condiciones de uso</a> y el 
+            <a href="#" class="text-blue-700 hover:underline">Aviso de privacidad</a> de LIANJOY.
+        </p>
+    </div>
+
+    <footer class="mt-auto py-8 text-center text-xs text-gray-400 space-x-4 w-full max-w-md">
+        <a href="#" class="hover:text-blue-700 hover:underline">Condiciones de uso</a>
+        <a href="#" class="hover:text-blue-700 hover:underline">Aviso de privacidad</a>
+        <a href="#" class="hover:text-blue-700 hover:underline">Ayuda</a>
+        <p class="mt-2">&copy; 2026, LIANJOY, Inc. o sus filiales</p>
+    </footer>
+
+    <script>
+        function toggleModo(modo) {
+            const cNombre = document.getElementById('campo-nombre');
+            const cTelefono = document.getElementById('campo-telefono');
+            const tabL = document.getElementById('tab-login');
+            const tabR = document.getElementById('tab-registro');
+
+            if (modo === 'registro') {
+                cNombre.classList.remove('hidden');
+                cTelefono.classList.remove('hidden');
+                tabR.classList.add('border-b-2', 'border-terra-green', 'font-bold', 'text-terra-green');
+                tabR.classList.remove('text-gray-400');
+                tabL.classList.remove('border-b-2', 'border-terra-green', 'font-bold', 'text-terra-green');
+                tabL.classList.add('text-gray-400');
+            } else {
+                cNombre.classList.add('hidden');
+                cTelefono.classList.add('hidden');
+                tabL.classList.add('border-b-2', 'border-terra-green', 'font-bold', 'text-terra-green');
+                tabL.classList.remove('text-gray-400');
+                tabR.classList.remove('border-b-2', 'border-terra-green', 'font-bold', 'text-terra-green');
+                tabR.classList.add('text-gray-400');
+            }
+        }
+    </script>
+</body>
+</html>
