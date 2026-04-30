@@ -1,7 +1,11 @@
 package com.example.LIANJOY.controller;
 
+import com.example.LIANJOY.model.Pedido;
 import com.example.LIANJOY.model.Producto;
+import com.example.LIANJOY.model.Usuario;
+import com.example.LIANJOY.repository.PedidoRepository;
 import jakarta.servlet.http.HttpSession;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -13,17 +17,18 @@ import java.util.List;
 @Controller
 public class PedidoController {
 
-    // 1. Mostrar la página de checkout (Captura de dirección)
+    @Autowired
+    private PedidoRepository pedidoRepository;
+
+    // 1. Mostrar la página de checkout
     @GetMapping("/checkout")
     public String irACheckout(HttpSession session, Model model) {
         List<Producto> carrito = (List<Producto>) session.getAttribute("carrito");
         
-        // Si el carrito está vacío, lo mandamos de vuelta para evitar errores
         if (carrito == null || carrito.isEmpty()) {
             return "redirect:/carrito";
         }
 
-        // Calculamos el total para mostrarlo en el resumen del checkout
         double total = carrito.stream()
                              .mapToDouble(p -> p.getPrecio() != null ? p.getPrecio() : 0.0)
                              .sum();
@@ -32,54 +37,75 @@ public class PedidoController {
         return "checkout";
     }
 
-    // 2. Procesar datos de envío y pasar a la pasarela de PayPal
+    // 2. Procesar datos de envío y pasar a pago_paypal
     @PostMapping("/pedido/confirmar")
     public String confirmarPedido(
-            @RequestParam("pais") String pais,
-            @RequestParam("ciudad") String ciudad,
-            @RequestParam("codigoPostal") String cp,
-            @RequestParam("direccion") String direccion,
+            @RequestParam String pais,
+            @RequestParam String ciudad,
+            @RequestParam String codigoPostal,
+            @RequestParam String direccion,
             HttpSession session, Model model) {
-        
-        // Guardamos los datos en la sesión para usarlos en la confirmación final
-        session.setAttribute("envioPais", pais);
-        session.setAttribute("envioCiudad", ciudad);
-        session.setAttribute("envioDireccion", direccion);
+    
+        try {
+            // Guardamos la dirección completa formateada para el admin
+            String direccionCompleta = direccion + ", " + ciudad + ", " + pais + " (CP: " + codigoPostal + ")";
+            session.setAttribute("envioDireccion", direccionCompleta);
 
-        List<Producto> carrito = (List<Producto>) session.getAttribute("carrito");
-        double total = (carrito != null) ? 
-                       carrito.stream().mapToDouble(p -> p.getPrecio() != null ? p.getPrecio() : 0.0).sum() : 0.0;
-        
-        model.addAttribute("total", total);
-        
-        // Redirige a la vista donde está el botón amarillo de PayPal
-        return "pago_paypal"; 
+            List<Producto> carrito = (List<Producto>) session.getAttribute("carrito");
+            if (carrito == null || carrito.isEmpty()) return "redirect:/carrito";
+
+            double total = carrito.stream().mapToDouble(p -> p.getPrecio() != null ? p.getPrecio() : 0.0).sum();
+            model.addAttribute("total", total);
+
+            return "pago_paypal"; 
+        } catch (Exception e) {
+            System.out.println("Error en pedido: " + e.getMessage());
+            return "redirect:/checkout?error";
+        }
     }
 
-    // 3. Confirmación de éxito y LIMPIEZA del carrito
+    // 3. Confirmación de éxito, GUARDADO EN BD y limpieza del carrito
     @GetMapping("/pedido/exito")
     public String mostrarExito(HttpSession session, Model model) {
-        // Obtenemos los datos antes de borrar la sesión para la vista de agradecimiento
         List<Producto> productosComprados = (List<Producto>) session.getAttribute("carrito");
+        Usuario usuario = (Usuario) session.getAttribute("usuarioLogueado");
         String direccion = (String) session.getAttribute("envioDireccion");
         
-        // Seguridad: Si no hay productos en sesión, no hay nada que confirmar
-        if (productosComprados == null) {
+        // Seguridad: Verificar que haya sesión y productos
+        if (productosComprados == null || usuario == null) {
             return "redirect:/"; 
         }
 
-        // Calculamos el total final cobrado
-        double total = productosComprados.stream()
-                                         .mapToDouble(p -> p.getPrecio() != null ? p.getPrecio() : 0.0)
-                                         .sum();
+        try {
+            // --- ¡GUARDAMOS EL PEDIDO EN LA BASE DE DATOS! ---
+            Pedido nuevoPedido = new Pedido();
+            nuevoPedido.setUsuario(usuario);
+            nuevoPedido.setClienteEmail(usuario.getEmail());
+            nuevoPedido.setDireccion(direccion);
+            nuevoPedido.setEstadoPedido("PAGADO"); // Aparecerá así en el panel de Milton
+            
+            double total = productosComprados.stream()
+                                             .mapToDouble(p -> p.getPrecio() != null ? p.getPrecio() : 0.0)
+                                             .sum();
+            nuevoPedido.setTotal(total);
 
-        model.addAttribute("productos", productosComprados);
-        model.addAttribute("total", total);
-        model.addAttribute("direccion", direccion);
+            // Guardamos físicamente en la tabla 'pedidos'
+            pedidoRepository.save(nuevoPedido);
+            System.out.println("--- PEDIDO GUARDADO PARA EL ADMIN: " + nuevoPedido.getId() + " ---");
 
-        // ¡PASO FINAL! Limpiamos el carrito para que el contador vuelva a 0
-        session.removeAttribute("carrito");
-        
-        return "pago_exito";
+            // Pasar datos a la vista de éxito
+            model.addAttribute("productos", productosComprados);
+            model.addAttribute("total", total);
+            model.addAttribute("direccion", direccion);
+
+            // ¡PASO FINAL! Limpiamos el carrito para que el contador vuelva a 0
+            session.removeAttribute("carrito");
+            
+            return "pago_exito";
+
+        } catch (Exception e) {
+            System.err.println("Error al guardar pedido: " + e.getMessage());
+            return "redirect:/";
+        }
     }
 }

@@ -4,7 +4,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 
@@ -15,28 +14,31 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
+            // 1. Desactivar CSRF para permitir peticiones POST desde nuestro formulario
             .csrf(csrf -> csrf.disable()) 
+            
             .authorizeHttpRequests(auth -> auth
-                // 1. Rutas públicas: Tienda, Login, Carrito y Recursos estáticos
-                .requestMatchers(
-                    "/", 
-                    "/acceso", 
-                    "/carrito/**", 
-                    "/css/**", 
-                    "/js/**", 
-                    "/imagenes/**", 
-                    "/favicon.ico"
-                ).permitAll()
-                
-                // 2. Cualquier otra ruta requiere estar logueado
+                // 2. Rutas totalmente públicas (Sin necesidad de login)
+               .requestMatchers(
+    "/", 
+    "/acceso", 
+    "/api/auth/**", 
+    "/carrito/**", 
+    "/checkout",
+    "/pedido/**",
+    "/pago_paypal",
+    "/pago_exitoso",
+    "/admin/**",        // <--- AGREGA ESTA LÍNEA para que Milton pueda entrar al panel
+    "/css/**", 
+    "/js/**", 
+    "/imagenes/**", 
+    "/favicon.ico"
+).permitAll()
+                // 3. Cualquier otra ruta (como un panel de admin futuro) requiere login
                 .anyRequest().authenticated()
             )
-            .formLogin(login -> login
-                .loginPage("/acceso") // Tu página personalizada
-                .loginProcessingUrl("/login") 
-                .defaultSuccessUrl("/", true) // Obliga a ir a la tienda tras el login
-                .permitAll()
-            )
+            
+            // 4. Configuración de Logout
             .logout(logout -> logout
                 .logoutUrl("/logout")
                 .logoutSuccessUrl("/") 
@@ -45,11 +47,13 @@ public class SecurityConfig {
 
         return http.build();
     }
+@Bean
+    public org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer webSecurityCustomizer() {
+        return (web) -> web.ignoring().requestMatchers("/admin/**");
+    }
 
-    // Bean para encriptar/leer contraseñas de la base de datos
     @Bean
-public PasswordEncoder passwordEncoder() {
-    // Esto permite que Spring lea las contraseñas en texto plano (NO RECOMENDADO PARA PRODUCCIÓN)
-    return org.springframework.security.crypto.password.NoOpPasswordEncoder.getInstance();
-}
+    public PasswordEncoder passwordEncoder() {
+        return org.springframework.security.crypto.password.NoOpPasswordEncoder.getInstance();
+    }
 }

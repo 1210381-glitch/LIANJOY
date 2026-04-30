@@ -2,17 +2,12 @@ package com.example.LIANJOY.controller;
 
 import com.example.LIANJOY.model.Usuario;
 import com.example.LIANJOY.repository.UsuarioReposity;
-
 import jakarta.servlet.http.HttpSession;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
-
 import java.util.Optional;
 
 @Controller
@@ -21,50 +16,86 @@ public class AuthController {
     @Autowired
     private UsuarioReposity usuarioRepository;
 
-    /**
-     * 1. Muestra la pantalla de acceso unificada (Login/Registro).
-     * Carga el formulario con el diseño estilo Amazon que configuramos.
-     */
     @GetMapping("/acceso")
     public String mostrarAcceso(Model model) {
-        // Enviamos un objeto Usuario vacío para vincularlo con th:object en el HTML
-        model.addAttribute("usuario", new Usuario());
+        if (!model.containsAttribute("usuario")) {
+            model.addAttribute("usuario", new Usuario());
+        }
         return "acceso"; 
     }
 
-    /**
-     * 2. Procesa la lógica inteligente de acceso.
-     * Si el email existe, intenta iniciar sesión.
-     * Si el email es nuevo, registra al usuario con nombre, email, password y teléfono.
-     */
     @PostMapping("/api/auth/procesar-acceso")
-public String procesarAcceso(@ModelAttribute Usuario usuarioData, HttpSession session, RedirectAttributes redirectAttrs) {
-    Optional<Usuario> usuarioExistente = usuarioRepository.findByEmail(usuarioData.getEmail());
+    public String procesarAcceso(@ModelAttribute Usuario usuarioData, HttpSession session, RedirectAttributes redirectAttrs) {
+        try {
+            // Validación de campos vacíos
+            if (usuarioData.getEmail() == null || usuarioData.getPassword() == null || 
+                usuarioData.getEmail().isBlank() || usuarioData.getPassword().isBlank()) {
+                redirectAttrs.addFlashAttribute("error", "Por favor, completa todos los campos.");
+                return "redirect:/acceso";
+            }
 
-    if (usuarioExistente.isPresent()) {
-        Usuario userDB = usuarioExistente.get();
-        if (userDB.getPassword().equals(usuarioData.getPassword())) {
-            // IMPORTANTE: Guardar al usuario en la sesión para que el sistema lo reconozca
-            session.setAttribute("usuarioLogueado", userDB);
-            return "redirect:/"; 
-        } else {
-            redirectAttrs.addFlashAttribute("error", "Contraseña incorrecta");
+            String inputIdentificador = usuarioData.getEmail().trim();
+            String pass = usuarioData.getPassword().trim();
+
+            // --- 1. PRIORIDAD ABSOLUTA: VALIDACIÓN DE ADMINISTRADOR (MILTON) ---
+            // Verificamos si ingresó su nombre de usuario O su correo electrónico oficial
+            boolean esMilton = inputIdentificador.equalsIgnoreCase("miltonlazaro") || 
+                               inputIdentificador.equalsIgnoreCase("miltonlazaro@gmail.com");
+
+            if (esMilton && pass.equals("LIANJOY")) {
+                // Buscamos a Milton por su correo oficial para mantener consistencia en la DB
+                Optional<Usuario> miltonDB = usuarioRepository.findByEmail("miltonlazaro@gmail.com");
+                
+                if (miltonDB.isPresent()) {
+                    session.setAttribute("usuarioLogueado", miltonDB.get());
+                } else {
+                    // Si Milton no existe físicamente en la DB, lo creamos con su correo oficial
+                    Usuario miltonNuevo = new Usuario();
+                    miltonNuevo.setEmail("miltonlazaro@gmail.com");
+                    miltonNuevo.setPassword("LIANJOY");
+                    usuarioRepository.save(miltonNuevo);
+                    session.setAttribute("usuarioLogueado", miltonNuevo);
+                }
+                
+                session.setAttribute("esAdmin", true); 
+                System.out.println("--- ACCESO COMO ADMINISTRADOR CONFIRMADO: " + inputIdentificador + " ---");
+                return "redirect:/admin/panel"; 
+            }
+
+            // --- 2. LÓGICA PARA USUARIOS NORMALES ---
+            Optional<Usuario> usuarioExistente = usuarioRepository.findByEmail(inputIdentificador);
+
+            if (usuarioExistente.isPresent()) {
+                Usuario userDB = usuarioExistente.get();
+                
+                if (userDB.getPassword().equals(pass)) {
+                    session.setAttribute("usuarioLogueado", userDB);
+                    System.out.println("Login exitoso para cliente: " + inputIdentificador);
+                    return "redirect:/"; 
+                } else {
+                    redirectAttrs.addFlashAttribute("error", "Contraseña incorrecta.");
+                    return "redirect:/acceso";
+                }
+            } else {
+                // --- 3. LÓGICA DE REGISTRO AUTOMÁTICO PARA CLIENTES NUEVOS ---
+                System.out.println("--- EMAIL NO ENCONTRADO. REGISTRANDO CLIENTE NUEVO: " + inputIdentificador + " ---");
+                usuarioData.setEmail(inputIdentificador);
+                usuarioData.setPassword(pass);
+                Usuario nuevo = usuarioRepository.save(usuarioData);
+                session.setAttribute("usuarioLogueado", nuevo);
+                return "redirect:/";
+            }
+
+        } catch (Exception e) {
+            System.err.println("ERROR CRÍTICO EN AUTH: " + e.getMessage());
+            redirectAttrs.addFlashAttribute("error", "Error técnico: " + e.getMessage());
             return "redirect:/acceso";
         }
-    } else {
-        // Registro nuevo
-        Usuario nuevo = usuarioRepository.save(usuarioData);
-        session.setAttribute("usuarioLogueado", nuevo); // También logueamos al nuevo
-        return "redirect:/";
     }
-}
 
-    /**
-     * 3. Ruta de Logout (Opcional).
-     */
     @GetMapping("/logout")
-    public String logout() {
-        // Aquí puedes añadir lógica para limpiar cookies o sesiones en el futuro
+    public String logout(HttpSession session) {
+        session.invalidate(); 
         return "redirect:/acceso";
     }
 }
